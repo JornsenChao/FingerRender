@@ -1,6 +1,4 @@
 // src/managers/HandVisualizer.js
-// 在摄像头画面上绘制手部关键点和骨架连线
-
 export class HandVisualizer {
   constructor(videoElement, canvasElement) {
     this.video = videoElement;
@@ -9,18 +7,15 @@ export class HandVisualizer {
   }
 
   drawResults(allHandsLandmarks) {
-    if (!allHandsLandmarks) return;
-
     this.canvas.width = this.video.videoWidth;
     this.canvas.height = this.video.videoHeight;
 
-    // 1) 先把当前video帧画上
     this.ctx.save();
+    // 先把video帧画上
     this.ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
     this.ctx.restore();
 
-    // 2) 画关键点和连线
-    const CONNECTIONS = [
+    const CONN = [
       [0, 1],
       [1, 2],
       [2, 3],
@@ -49,23 +44,23 @@ export class HandVisualizer {
     this.ctx.fillStyle = 'red';
 
     allHandsLandmarks.forEach((hand) => {
-      let pixelPoints = hand.map((pt) => ({
+      const pxPoints = hand.map((pt) => ({
         x: pt.x * this.canvas.width,
         y: pt.y * this.canvas.height,
       }));
 
-      // Draw connections
-      CONNECTIONS.forEach(([s, e]) => {
-        const p1 = pixelPoints[s];
-        const p2 = pixelPoints[e];
+      // connections
+      CONN.forEach(([s, e]) => {
+        const p1 = pxPoints[s],
+          p2 = pxPoints[e];
         this.ctx.beginPath();
         this.ctx.moveTo(p1.x, p1.y);
         this.ctx.lineTo(p2.x, p2.y);
         this.ctx.stroke();
       });
 
-      // Draw keypoints
-      pixelPoints.forEach((p) => {
+      // keypoints
+      pxPoints.forEach((p) => {
         this.ctx.beginPath();
         this.ctx.arc(p.x, p.y, 4, 0, 2 * Math.PI);
         this.ctx.fill();

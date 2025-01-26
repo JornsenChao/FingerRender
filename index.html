@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Gesture-based Parametric Demo (Decoupled)</title>
+    <title>Multi-Step Param & Gesture Demo</title>
     <style>
       body {
         margin: 0;
@@ -11,15 +11,37 @@
         background-color: #333;
         color: #eee;
       }
-      #infoPanel {
+      /* ======== Common Panel / Layout ======== */
+      #mainContainer {
+        position: relative;
+        width: 100vw;
+        height: 100vh;
+      }
+
+      .stepPanel {
         position: absolute;
         top: 10px;
         left: 10px;
+        right: 10px;
+        margin: auto;
+        max-width: 600px;
         background: rgba(0, 0, 0, 0.5);
-        padding: 10px;
-        border-radius: 4px;
-        z-index: 10;
+        border-radius: 6px;
+        padding: 15px;
+        display: none; /* hidden by default */
+        z-index: 9999;
       }
+      .stepPanel.active {
+        display: block;
+      }
+      .btnGroup {
+        margin-top: 10px;
+      }
+      button {
+        margin-right: 6px;
+      }
+
+      /* ======== Snapshots & Camera Overlay ======== */
       #snapshots {
         position: absolute;
         top: 10px;
@@ -34,6 +56,7 @@
       .snapshotItem {
         margin-bottom: 10px;
       }
+
       #cameraContainer {
         position: absolute;
         bottom: 10px;
@@ -44,6 +67,7 @@
         border-radius: 4px;
         overflow: hidden;
         z-index: 9999;
+        display: none; /* 在第5步才显示 */
       }
       #video {
         position: absolute;
@@ -56,34 +80,101 @@
         width: 100%;
         height: 100%;
       }
+      /* 3D 渲染全屏覆盖 */
+      canvas.webgl {
+        position: absolute;
+        top: 0;
+        left: 0;
+      }
     </style>
   </head>
+
   <body>
-    <!-- 信息提示面板 -->
-    <div id="infoPanel">
-      <h3>Gesture-based Parametric Demo (Decoupled)</h3>
-      <p>
-        单手或双手均可：<br />
-        - 拇指&食指接近 => Pinch (捏合)；持续 1s => Snapshot<br />
-        - 手掌完全摊开 => PalmOpen；持续 6s => End Session<br />
-      </p>
-      <p>
-        切换场景:
-        <button id="btnSceneA">Scene A: Lego</button>
-        <button id="btnSceneB">Scene B: Columns</button>
-      </p>
-      <p>paramLeft & paramRight 分别对应左/右手的捏合程度。</p>
+    <div id="mainContainer">
+      <!-- 场景渲染会注入在此容器中 (由 SceneManager) -->
+
+      <!-- ======== Step 1: Choose Scene ======== -->
+      <div id="step1" class="stepPanel">
+        <h2>Step 1: 选择场景</h2>
+        <p>请选择一个场景进行演示:</p>
+        <button data-scene="sceneA">Scene A: Lego Stack</button>
+        <button data-scene="sceneB">Scene B: Columns</button>
+        <div class="btnGroup">
+          <button id="btnGotoStep2" disabled>下一步</button>
+        </div>
+      </div>
+
+      <!-- ======== Step 2: 查看并设置场景参数 ======== -->
+      <div id="step2" class="stepPanel">
+        <h2>Step 2: 场景参数设置</h2>
+        <div id="paramListArea">
+          <!-- 动态插入可选参数 -->
+        </div>
+        <p style="margin-top: 10px">
+          选择你想控制的 **两个参数**（分别对应左手和右手），或创建“组合参数”。
+        </p>
+        <div class="btnGroup">
+          <button id="btnCreateCombo">+ 创建组合参数</button>
+        </div>
+        <div id="comboList"></div>
+
+        <div class="btnGroup">
+          <button id="btnGotoStep3" disabled>下一步</button>
+        </div>
+      </div>
+
+      <!-- ======== Step 3: 为左右手分配参数 ======== -->
+      <div id="step3" class="stepPanel">
+        <h2>Step 3: 分配参数给左右手</h2>
+        <p>
+          左手控制:
+          <select id="selectLeftParam"></select>
+        </p>
+        <p>
+          右手控制:
+          <select id="selectRightParam"></select>
+        </p>
+        <div class="btnGroup">
+          <button id="btnGotoStep4">下一步</button>
+        </div>
+      </div>
+
+      <!-- ======== Step 4: 基本编辑(拖拽操作) ======== -->
+      <div id="step4" class="stepPanel">
+        <h2>Step 4: 基础拖拽编辑</h2>
+        <p>
+          此时场景可见，但不启用摄像头。你可以点击并拖拽场景中的物体进行XYZ移动。
+        </p>
+        <p>完成后点击“进入手势交互”。</p>
+        <div class="btnGroup">
+          <button id="btnGotoStep5">进入手势交互</button>
+        </div>
+      </div>
+
+      <!-- ======== Step 5: 手势交互 ======== -->
+      <div id="step5" class="stepPanel">
+        <h2>Step 5: 手势交互</h2>
+        <p>
+          摄像头已开启；<br />
+          - 捏合手指2秒 => Snapshot；<br />
+          - 手掌摊开4秒 => 结束Session
+        </p>
+        <div class="btnGroup">
+          <button id="btnEndDemo">停止摄像头 & 结束</button>
+        </div>
+      </div>
+
+      <!-- Snapshots Panel -->
+      <div id="snapshots"></div>
+
+      <!-- Camera Overlay -->
+      <div id="cameraContainer">
+        <video id="video" autoplay playsinline muted></video>
+        <canvas id="landmarkCanvas"></canvas>
+      </div>
     </div>
 
-    <!-- 快照展示区域 -->
-    <div id="snapshots"></div>
-
-    <!-- 摄像头 + 手势标记 Canvas -->
-    <div id="cameraContainer">
-      <video id="video" autoplay playsinline muted></video>
-      <canvas id="landmarkCanvas"></canvas>
-    </div>
-
+    <!-- Main script -->
     <script type="module" src="./src/main.js"></script>
   </body>
 </html>
