@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Gesture-based Parametric Demo</title>
+    <title>Gesture-based Parametric Demo (Decoupled)</title>
     <style>
       body {
         margin: 0;
@@ -18,6 +18,7 @@
         background: rgba(0, 0, 0, 0.5);
         padding: 10px;
         border-radius: 4px;
+        z-index: 10;
       }
       #snapshots {
         position: absolute;
@@ -28,31 +29,60 @@
         border-radius: 4px;
         max-height: 70vh;
         overflow-y: auto;
+        z-index: 10;
       }
       .snapshotItem {
         margin-bottom: 10px;
       }
-      video {
-        display: none; /* 如果想实时查看摄像头画面可以改成 block */
+      #cameraContainer {
+        position: absolute;
+        bottom: 10px;
+        left: 10px;
+        width: 320px;
+        height: 240px;
+        border: 2px solid #999;
+        border-radius: 4px;
+        overflow: hidden;
+        z-index: 9999;
+      }
+      #video {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      #landmarkCanvas {
+        position: absolute;
+        width: 100%;
+        height: 100%;
       }
     </style>
   </head>
   <body>
     <!-- 信息提示面板 -->
     <div id="infoPanel">
-      <h3>Gesture-based Parametric Demo</h3>
-      <p>Try pinching your thumb and index finger to rotate blocks.</p>
-      <p>Hold the pinch for 1s to snapshot. (Check right panel)</p>
-      <p>Open palm (5 fingers) for 2s to end session.</p>
+      <h3>Gesture-based Parametric Demo (Decoupled)</h3>
+      <p>
+        - 捏合拇指&食指 => 调参数<br />
+        - 捏合1秒 => Snapshot<br />
+        - 张开手掌2秒 => End Session
+      </p>
+      <p>
+        切换场景:
+        <button id="btnSceneA">Scene A: Lego</button>
+        <button id="btnSceneB">Scene B: Columns</button>
+      </p>
     </div>
 
     <!-- 快照展示区域 -->
     <div id="snapshots"></div>
 
-    <!-- 视频标签，用于MediaPipe捕捉画面 -->
-    <video id="video" autoplay playsinline></video>
+    <!-- 摄像头 + 手势标记 Canvas -->
+    <div id="cameraContainer">
+      <video id="video" autoplay playsinline muted></video>
+      <canvas id="landmarkCanvas"></canvas>
+    </div>
 
-    <!-- 主入口脚本 -->
-    <script type="module" src="./main.js"></script>
+    <script type="module" src="./src/main.js"></script>
   </body>
 </html>
