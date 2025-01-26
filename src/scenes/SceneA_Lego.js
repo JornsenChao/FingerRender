@@ -10,8 +10,8 @@ export class SceneA_Lego {
 
   init(scene) {
     // 创建5个Box叠加
-    const geometry = new THREE.BoxGeometry(2, 1, 2);
-    for (let i = 0; i < 5; i++) {
+    const geometry = new THREE.BoxGeometry(2, 0.5, 2);
+    for (let i = 0; i < 8; i++) {
       const mat = new THREE.MeshStandardMaterial({ color: 0x4caf50 });
       mat.color.setHSL(0.3 + i * 0.1, 1, 0.5);
 
@@ -28,7 +28,7 @@ export class SceneA_Lego {
     const angle = paramValue * maxAngle;
 
     this.blocks.forEach((block, i) => {
-      block.rotation.y = angle + i * 0.3 * angle;
+      block.rotation.y = angle + i * 0.1 * angle;
     });
   }
 
