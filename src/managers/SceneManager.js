@@ -71,7 +71,6 @@ export class SceneManager {
     }
 
     // 清空 scene 中之前的对象 (不包括灯光和相机)
-    // 只移除 mesh / geometry / material
     this._clearScene();
 
     // 加载新的场景
@@ -104,9 +103,10 @@ export class SceneManager {
   }
 
   // 每帧更新
-  update(paramValue) {
+  update(paramData) {
+    // paramData = { paramLeft, paramRight }
     if (this.currentScene && this.currentScene.update) {
-      this.currentScene.update(paramValue);
+      this.currentScene.update(paramData);
     }
   }
 

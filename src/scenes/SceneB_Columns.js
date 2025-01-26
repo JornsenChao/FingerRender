@@ -27,14 +27,16 @@ export class SceneB_Columns {
     scene.add(this.roof);
   }
 
-  update(paramValue) {
-    // paramValue => 让柱子略倾斜, 屋顶抬高
+  update({ paramLeft, paramRight }) {
+    // paramLeft => 让柱子倾斜
+    // paramRight => 让屋顶抬高
     this.columns.forEach((col, i) => {
-      const tilt = (i % 2 === 0 ? 1 : -1) * (paramValue * 0.2);
+      const tilt = (i % 2 === 0 ? 1 : -1) * (paramLeft * 0.3);
       col.rotation.z = tilt;
     });
     if (this.roof) {
-      this.roof.position.y = 3 + paramValue * 2;
+      // 屋顶的抬高区间: 3 ~ 5
+      this.roof.position.y = 3 + paramRight * 2;
     }
   }
 

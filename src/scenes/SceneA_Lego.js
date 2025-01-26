@@ -10,8 +10,8 @@ export class SceneA_Lego {
 
   init(scene) {
     // 创建5个Box叠加
-    const geometry = new THREE.BoxGeometry(2, 0.5, 2);
-    for (let i = 0; i < 8; i++) {
+    const geometry = new THREE.BoxGeometry(2, 1, 2);
+    for (let i = 0; i < 5; i++) {
       const mat = new THREE.MeshStandardMaterial({ color: 0x4caf50 });
       mat.color.setHSL(0.3 + i * 0.1, 1, 0.5);
 
@@ -22,13 +22,17 @@ export class SceneA_Lego {
     }
   }
 
-  update(paramValue) {
-    // paramValue in [0,1] => 旋转
+  update({ paramLeft, paramRight }) {
+    // paramLeft, paramRight in [0,1]
+    // 让方块做一些旋转 + 偏移
     const maxAngle = Math.PI * 2;
-    const angle = paramValue * maxAngle;
+    const angleLeft = paramLeft * maxAngle;
+    const angleRight = paramRight * maxAngle;
 
     this.blocks.forEach((block, i) => {
-      block.rotation.y = angle + i * 0.1 * angle;
+      block.rotation.y = angleLeft + i * 0.2 * angleRight;
+      // 也让某些方块上下浮动一点
+      block.position.x = Math.sin(angleRight + i) * 0.5;
     });
   }
 

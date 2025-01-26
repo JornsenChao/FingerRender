@@ -8,7 +8,7 @@ export class SnapshotManager {
   }
 
   addSnapshot(snapData) {
-    // snapData: { time, param, sceneId, image(base64) }
+    // snapData: { time, param: {left, right}, sceneId, image(base64), triggeredBy }
     this.snapshots.push(snapData);
     this._render();
   }
@@ -20,10 +20,13 @@ export class SnapshotManager {
       const div = document.createElement('div');
       div.className = 'snapshotItem';
       div.innerHTML = `
-          <div><strong>Snapshot #${i + 1}</strong> @ ${snap.time}</div>
-          <div>Scene: ${snap.sceneId}, Param: ${snap.param.toFixed(2)}</div>
-          <img src="${snap.image}" width="120" />
-        `;
+        <div><strong>Snapshot #${i + 1}</strong> @ ${snap.time}</div>
+        <div>Scene: ${snap.sceneId}, Param: L=${snap.param.left}, R=${
+        snap.param.right
+      }</div>
+        <div>Triggered by: ${snap.triggeredBy}</div>
+        <img src="${snap.image}" width="120" />
+      `;
       this.containerElem.appendChild(div);
     });
   }

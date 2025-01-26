@@ -63,15 +63,16 @@
     <div id="infoPanel">
       <h3>Gesture-based Parametric Demo (Decoupled)</h3>
       <p>
-        - 捏合拇指&食指 => 调参数<br />
-        - 捏合1秒 => Snapshot<br />
-        - 张开手掌2秒 => End Session
+        单手或双手均可：<br />
+        - 拇指&食指接近 => Pinch (捏合)；持续 1s => Snapshot<br />
+        - 手掌完全摊开 => PalmOpen；持续 6s => End Session<br />
       </p>
       <p>
         切换场景:
         <button id="btnSceneA">Scene A: Lego</button>
         <button id="btnSceneB">Scene B: Columns</button>
       </p>
+      <p>paramLeft & paramRight 分别对应左/右手的捏合程度。</p>
     </div>
 
     <!-- 快照展示区域 -->
