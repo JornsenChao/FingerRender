@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Gesture-based Parametric Demo</title>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+        font-family: sans-serif;
+        background-color: #333;
+        color: #eee;
+      }
+      #infoPanel {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        background: rgba(0, 0, 0, 0.5);
+        padding: 10px;
+        border-radius: 4px;
+      }
+      #snapshots {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: rgba(0, 0, 0, 0.5);
+        padding: 10px;
+        border-radius: 4px;
+        max-height: 70vh;
+        overflow-y: auto;
+      }
+      .snapshotItem {
+        margin-bottom: 10px;
+      }
+      video {
+        display: none; /* 如果想实时查看摄像头画面可以改成 block */
+      }
+    </style>
+  </head>
+  <body>
+    <!-- 信息提示面板 -->
+    <div id="infoPanel">
+      <h3>Gesture-based Parametric Demo</h3>
+      <p>Try pinching your thumb and index finger to rotate blocks.</p>
+      <p>Hold the pinch for 1s to snapshot. (Check right panel)</p>
+      <p>Open palm (5 fingers) for 2s to end session.</p>
+    </div>
+
+    <!-- 快照展示区域 -->
+    <div id="snapshots"></div>
+
+    <!-- 视频标签，用于MediaPipe捕捉画面 -->
+    <video id="video" autoplay playsinline></video>
+
+    <!-- 主入口脚本 -->
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>
