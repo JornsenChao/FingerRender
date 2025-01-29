@@ -93,12 +93,13 @@
     <div id="mainContainer">
       <!-- 场景渲染会注入在此容器中 (由 SceneManager) -->
 
-      <!-- ======== Step 1: Choose Scene ======== -->
+      <!-- ======== Step 1: 选择场景 ======== -->
       <div id="step1" class="stepPanel">
         <h2>Step 1: 选择场景</h2>
         <p>请选择一个场景进行演示:</p>
         <button data-scene="sceneA">Scene A: Lego Stack</button>
         <button data-scene="sceneB">Scene B: Columns</button>
+        <button data-scene="sceneC">Scene C: Facade</button>
         <div class="btnGroup">
           <button id="btnGotoStep2" disabled>下一步</button>
         </div>
@@ -155,9 +156,9 @@
       <div id="step5" class="stepPanel">
         <h2>Step 5: 手势交互</h2>
         <p>
-          摄像头已开启；<br />
-          - 捏合手指2秒 => Snapshot；<br />
-          - 手掌摊开4秒 => 结束Session
+          摄像头已开启：<br />
+          - **单手 Pinch (握拳) 2秒** => Snapshot；<br />
+          - **双手同时握拳 4秒** => 结束Session
         </p>
         <div class="btnGroup">
           <button id="btnEndDemo">停止摄像头 & 结束</button>

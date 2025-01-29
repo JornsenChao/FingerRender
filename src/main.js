@@ -8,8 +8,8 @@ import { DragManager } from './managers/DragManager.js';
 // 全局配置 (场景ID、可用参数、已选参数、组合参数等)
 const appConfig = {
   chosenScene: null,
-  availableParams: [], // e.g. ["rotate", "height", "scale"]
-  comboParams: [], // e.g. ["rotate+scale"]
+  availableParams: [], // e.g. ["rotate", "offset", "another", "scaleZ"]
+  comboParams: [], // e.g. ["rotate+scaleZ"]
   selectedParams: [], // 最多2个 (或包含combo)
   leftParam: null,
   rightParam: null,
@@ -120,8 +120,8 @@ async function initGestureManagers() {
     });
   };
 
-  gestureManager.onEndSession = (handLabel) => {
-    alert(`手势: ${handLabel}手掌摊开4秒 -> 结束Session`);
+  gestureManager.onEndSession = () => {
+    alert(`双手同时握拳 4秒 -> 结束Session`);
     gestureManager.stopCamera();
     document.getElementById('cameraContainer').style.display = 'none';
   };
@@ -167,15 +167,21 @@ animate();
 function computeParamValue(paramName, rawL, rawR) {
   if (!paramName) return 0;
 
-  // 如果是 "rotate+scale" 这种组合 => 简单示例：取(rawL + rawR)/2
+  // 如果是 "rotate+scaleZ" 这类组合 => 简单示例：取平均
   if (paramName.includes('+')) {
     return (rawL + rawR) / 2;
-  } else if (paramName.includes('*')) {
-    // "rotate*offset" => rawL * rawR
-    return rawL * rawR;
-  } else {
-    // 普通单一参数 => 简单地用 rawL，如果 rawL 为 0 则用 rawR
-    return rawL > 0 ? rawL : rawR;
+  }
+  switch (paramName) {
+    case 'finAngle':
+      // 如果finAngle是在左手param => 用rawL，否则用rawR
+      return paramName === appConfig.leftParam ? rawL : rawR;
+    case 'glassTint':
+      return paramName === appConfig.leftParam ? rawL : rawR;
+    // 如果你还定义了 frameDepth 等，也同理处理
+    default:
+      // fallback: 直接用 rawL 或 rawR (若你想要别的逻辑也行)
+      if (paramName === appConfig.leftParam) return rawL;
+      else return rawR;
   }
 }
 
@@ -184,11 +190,14 @@ btnGotoStep2.addEventListener('click', async () => {
   if (!appConfig.chosenScene) return;
   showStep(2);
 
-  // 假设从场景文件里获取可用参数列表；此处用模拟数据
+  // 根据选择的场景，填充可用参数
   if (appConfig.chosenScene === 'sceneA') {
-    appConfig.availableParams = ['rotate', 'offset', 'another'];
-  } else {
+    // 新增 "scaleZ" 参数
+    appConfig.availableParams = ['rotate', 'offset', 'another', 'scaleZ'];
+  } else if (appConfig.chosenScene === 'sceneB') {
     appConfig.availableParams = ['tilt', 'roofHeight', 'fooParam'];
+  } else if (appConfig.chosenScene === 'sceneC') {
+    appConfig.availableParams = ['finAngle', 'glassTint'];
   }
 
   // 渲染 paramList
@@ -221,7 +230,7 @@ function onParamCheckChange() {
 
 // ========== Step 2: 创建组合参数 ==========
 btnCreateCombo.addEventListener('click', () => {
-  // 简单示例：自动创建 pA + pB
+  // 简单示例：自动创建 pA + pB（取前两个可用参数）
   if (appConfig.availableParams.length >= 2) {
     const pA = appConfig.availableParams[0];
     const pB = appConfig.availableParams[1];

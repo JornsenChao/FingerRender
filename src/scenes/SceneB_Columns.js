@@ -22,6 +22,8 @@ export class SceneB_Columns {
     this.roof = new THREE.Mesh(roofGeo, roofMat);
     this.roof.position.set(0, 3, 0);
     scene.add(this.roof);
+
+    console.log('SceneB init...');
   }
 
   update({ paramLeft, paramRight }) {

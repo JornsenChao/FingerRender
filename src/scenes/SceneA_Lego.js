@@ -16,16 +16,23 @@ export class SceneA_Lego {
       scene.add(mesh);
       this.blocks.push(mesh);
     }
+    console.log('SceneA init...');
   }
 
   update({ paramLeft, paramRight }) {
-    // 两个参数都在 [0,1]
-    // 做一个简易演示：左参数控制整体旋转，右参数控制上下摆动
+    // paramLeft ~ rotate
+    // paramRight ~ scaleZ
     const angle = paramLeft * Math.PI * 2;
 
+    // 我们把 scaleZ 范围设定：在 [1, 2] 之间(或随你喜欢)
+    const zScale = 1 + paramRight;
+
     this.blocks.forEach((b, i) => {
+      // 旋转
       b.rotation.y = angle + i * 0.2;
-      b.position.x = Math.sin(angle + i * 0.5) * 1.0 * paramRight;
+
+      // Z 方向缩放
+      b.scale.z = zScale;
     });
   }
 

@@ -5,6 +5,7 @@ import { OrbitControls } from 'https://unpkg.com/three@0.152.2/examples/jsm/cont
 // 引入具体场景
 import { SceneA_Lego } from '../scenes/SceneA_Lego.js';
 import { SceneB_Columns } from '../scenes/SceneB_Columns.js';
+import { SceneC_Facade } from '../scenes/SceneC_Facade.js'; // 顶部
 
 export class SceneManager {
   constructor(domContainer) {
@@ -53,7 +54,7 @@ export class SceneManager {
   }
 
   loadScene(sceneID) {
-    // 卸载旧场景
+    // 如果有旧场景, 先 dispose
     if (this.currentScene && this.currentScene.dispose) {
       this.currentScene.dispose(this.scene);
     }
@@ -64,6 +65,9 @@ export class SceneManager {
       newScene = new SceneA_Lego();
     } else if (sceneID === 'sceneB') {
       newScene = new SceneB_Columns();
+    } else if (sceneID === 'sceneC') {
+      newScene = new SceneC_Facade();
+      console.log('Loading SceneC_Facade...');
     } else {
       console.warn('Unknown sceneID:', sceneID);
       return;
@@ -71,7 +75,7 @@ export class SceneManager {
 
     this.currentScene = newScene;
     this.currentSceneID = sceneID;
-    this.currentScene.init(this.scene);
+    this.currentScene.init(this.scene); // 调用场景init()
   }
 
   _clearScene() {
@@ -92,6 +96,7 @@ export class SceneManager {
     // paramData = { paramLeft, paramRight }
     if (this.currentScene && this.currentScene.update) {
       this.currentScene.update(paramData);
+      console.log('Scene update', paramData);
     }
   }
 
