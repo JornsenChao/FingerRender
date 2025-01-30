@@ -5,105 +5,209 @@ import { HandVisualizer } from './managers/HandVisualizer.js';
 import { SnapshotManager } from './managers/SnapshotManager.js';
 import { DragManager } from './managers/DragManager.js';
 
-// 全局配置 (场景ID、可用参数、已选参数、组合参数等)
+// 全局配置对象
 const appConfig = {
   chosenScene: null,
-  availableParams: [], // e.g. ["rotate", "offset", "another", "scaleZ"]
-  comboParams: [], // e.g. ["rotate+scaleZ"]
-  selectedParams: [], // 最多2个 (或包含combo)
+  availableParams: [],
+  comboParams: [],
   leftParam: null,
   rightParam: null,
+  isDragOn: false,
+  isGestureOn: false,
 };
 
-// ======== DOM 绑定 ========
-const step1Panel = document.getElementById('step1');
-const step2Panel = document.getElementById('step2');
-const step3Panel = document.getElementById('step3');
-const step4Panel = document.getElementById('step4');
-const step5Panel = document.getElementById('step5');
+// ================== DOM 绑定 ===================
+const sceneButtons = document.querySelectorAll(
+  '#sceneSubmenu button[data-scene]'
+);
+const menuTutorial = document.getElementById('menuTutorial');
+const menuSaved = document.getElementById('menuSaved');
+const menuAbout = document.getElementById('menuAbout');
 
-const btnGotoStep2 = document.getElementById('btnGotoStep2');
-const paramListArea = document.getElementById('paramListArea');
-const btnCreateCombo = document.getElementById('btnCreateCombo');
-const comboList = document.getElementById('comboList');
-const btnGotoStep3 = document.getElementById('btnGotoStep3');
+const tutorialPanel = document.getElementById('tutorialPanel');
+const savedPanel = document.getElementById('savedPanel');
+const aboutPanel = document.getElementById('aboutPanel');
+
 const selectLeftParam = document.getElementById('selectLeftParam');
 const selectRightParam = document.getElementById('selectRightParam');
-const btnGotoStep4 = document.getElementById('btnGotoStep4');
-const btnGotoStep5 = document.getElementById('btnGotoStep5');
-const btnEndDemo = document.getElementById('btnEndDemo');
+const btnCreateCombo = document.getElementById('btnCreateCombo');
+const btnToggleDrag = document.getElementById('btnToggleDrag');
+const btnToggleGesture = document.getElementById('btnToggleGesture');
 
-// Step 1: 场景选择按钮
-const sceneButtons = step1Panel.querySelectorAll('button[data-scene]');
-sceneButtons.forEach((btn) => {
-  btn.addEventListener('click', () => {
-    const sceneId = btn.getAttribute('data-scene');
-    appConfig.chosenScene = sceneId;
-    console.log('Chosen scene:', sceneId);
-    // 启用"下一步"按钮
-    btnGotoStep2.disabled = false;
-  });
-});
+const cameraContainer = document.getElementById('cameraContainer');
+const snapshotsPanel = document.getElementById('snapshotsPanel');
 
-// 多步骤流程：控制面板的显示/隐藏
-function showStep(stepNum) {
-  [step1Panel, step2Panel, step3Panel, step4Panel, step5Panel].forEach((el) => {
-    el.classList.remove('active');
-  });
-  const stepEls = [
-    null,
-    step1Panel,
-    step2Panel,
-    step3Panel,
-    step4Panel,
-    step5Panel,
-  ];
-  stepEls[stepNum].classList.add('active');
-}
-
-// ========== Scene Manager & 其他 Manager ==========
+// =========== Scene Manager, Gesture, etc. =============
 let sceneManager = null;
 let dragManager = null;
 let gestureManager = null;
 let handVisualizer = null;
 let snapshotManager = null;
 
-// 初始化时就创建 SceneManager & SnapshotManager，但不加载任何场景
-function initManagers() {
-  console.log('initManagers() called.');
-  const container = document.getElementById('mainContainer');
-
+// =========== 初始化 =============
+function init() {
   // 创建 SceneManager
-  sceneManager = new SceneManager(container); // 内部会创建 renderer、camera 等
-  console.log('SceneManager created:', sceneManager);
+  const container = document.getElementById('threeContainer');
+  sceneManager = new SceneManager(container);
 
-  // Snapshot UI
-  const snapContainer = document.getElementById('snapshots');
-  snapshotManager = new SnapshotManager(snapContainer);
+  // SnapshotManager
+  snapshotManager = new SnapshotManager(snapshotsPanel);
 
-  // DragManager (负责点击拖拽) - 先不启用
+  // DragManager
   dragManager = new DragManager(
     sceneManager.renderer.domElement,
     sceneManager.camera,
     sceneManager.scene
   );
+  dragManager.disable(); // 初始关闭
+
+  // 手势功能：暂时不初始化，等用户点击“Gesture: ON”后再init
+  gestureManager = null;
+
+  // 绑定 sidebar按钮
+  sceneButtons.forEach((btn) => {
+    btn.addEventListener('click', onChooseScene);
+  });
+  menuTutorial.addEventListener('click', () => togglePanel(tutorialPanel));
+  menuSaved.addEventListener('click', () => togglePanel(savedPanel));
+  menuAbout.addEventListener('click', () => togglePanel(aboutPanel));
+
+  // 绑定 底部面板交互
+  btnCreateCombo.addEventListener('click', onCreateCombo);
+  btnToggleDrag.addEventListener('click', onToggleDrag);
+  btnToggleGesture.addEventListener('click', onToggleGesture);
+
+  // 启动动画循环
+  animate();
 }
 
-// 第4步点击进入手势交互时，再初始化手势
-async function initGestureManagers() {
-  console.log('initGestureManagers() called.');
+// ========== 切换场景 ==========
+function onChooseScene(e) {
+  const sceneId = e.target.getAttribute('data-scene');
+  appConfig.chosenScene = sceneId;
+  console.log('Chosen scene:', sceneId);
+
+  // 根据场景ID，填充可用参数
+  switch (sceneId) {
+    case 'sceneA':
+      appConfig.availableParams = ['rotate', 'offset', 'another', 'scaleZ'];
+      break;
+    case 'sceneB':
+      appConfig.availableParams = ['tilt', 'roofHeight', 'fooParam'];
+      break;
+    case 'sceneC':
+      appConfig.availableParams = ['finAngle', 'glassTint'];
+      break;
+    default:
+      appConfig.availableParams = [];
+  }
+  appConfig.comboParams = [];
+
+  // 重置下拉菜单
+  refreshParamSelectors();
+
+  // 真正加载场景
+  sceneManager.loadScene(sceneId);
+}
+
+// 刷新 左右手下拉菜单选项
+function refreshParamSelectors() {
+  // 清空
+  selectLeftParam.innerHTML = '';
+  selectRightParam.innerHTML = '';
+
+  // 取可选列表
+  const paramList = appConfig.availableParams.concat(appConfig.comboParams);
+
+  if (paramList.length === 0) {
+    // 如果场景还没选择，空列表
+    const opt = document.createElement('option');
+    opt.value = '';
+    opt.textContent = 'No params';
+    selectLeftParam.appendChild(opt.cloneNode(true));
+    selectRightParam.appendChild(opt.cloneNode(true));
+    return;
+  }
+
+  // 构建 <option>
+  paramList.forEach((p) => {
+    const opt1 = document.createElement('option');
+    opt1.value = p;
+    opt1.textContent = p;
+    selectLeftParam.appendChild(opt1);
+
+    const opt2 = document.createElement('option');
+    opt2.value = p;
+    opt2.textContent = p;
+    selectRightParam.appendChild(opt2);
+  });
+
+  // 默认选第一项
+  selectLeftParam.selectedIndex = 0;
+  selectRightParam.selectedIndex = 1 < paramList.length ? 1 : 0;
+
+  // 更新appConfig
+  appConfig.leftParam = selectLeftParam.value;
+  appConfig.rightParam = selectRightParam.value;
+}
+
+// 用户点击 +Combo
+function onCreateCombo() {
+  const paramList = appConfig.availableParams;
+  if (paramList.length < 2) {
+    alert('Not enough base params to create combo.');
+    return;
+  }
+  const comboName = paramList[0] + '+' + paramList[1];
+  if (!appConfig.comboParams.includes(comboName)) {
+    appConfig.comboParams.push(comboName);
+    refreshParamSelectors();
+  }
+}
+
+// 切换 Drag ON/OFF
+function onToggleDrag() {
+  appConfig.isDragOn = !appConfig.isDragOn;
+  if (appConfig.isDragOn) {
+    dragManager.enable();
+    btnToggleDrag.textContent = 'Drag: ON';
+  } else {
+    dragManager.disable();
+    btnToggleDrag.textContent = 'Drag: OFF';
+  }
+}
+
+// 切换 Gesture ON/OFF
+function onToggleGesture() {
+  appConfig.isGestureOn = !appConfig.isGestureOn;
+  if (appConfig.isGestureOn) {
+    initGestureIfNeeded();
+    cameraContainer.style.display = 'block';
+    btnToggleGesture.textContent = 'Gesture: ON';
+  } else {
+    stopGesture();
+    cameraContainer.style.display = 'none';
+    btnToggleGesture.textContent = 'Gesture: OFF';
+  }
+}
+
+// 初始化手势识别(只做一次)
+async function initGestureIfNeeded() {
+  if (gestureManager) {
+    return; // 已初始化过
+  }
+  console.log('initGestureIfNeeded...');
+
   const videoElement = document.getElementById('video');
   const landmarkCanvas = document.getElementById('landmarkCanvas');
-
   gestureManager = new GestureManager(videoElement, (allHands) => {
     if (handVisualizer) {
       handVisualizer.drawResults(allHands);
     }
   });
-
   handVisualizer = new HandVisualizer(videoElement, landmarkCanvas);
 
-  // 绑定手势事件: Snapshot & EndSession
+  // 绑定回调
   gestureManager.onSnapshot = (handLabel) => {
     console.log(`Snapshot triggered by ${handLabel} hand`);
     const timeStr = new Date().toLocaleTimeString();
@@ -119,26 +223,45 @@ async function initGestureManagers() {
       triggeredBy: handLabel,
     });
   };
-
   gestureManager.onEndSession = () => {
-    alert(`双手同时握拳 4秒 -> 结束Session`);
-    gestureManager.stopCamera();
-    document.getElementById('cameraContainer').style.display = 'none';
+    alert('双手同时Pinch 4秒 -> 手势Session结束');
+    onToggleGesture(); // 等价于手动关闭Gesture
   };
+
   await gestureManager.init();
   console.log('GestureManager init done, camera should be active now.');
 }
 
-// ======= 执行动画循环 =======
+// 停止手势
+function stopGesture() {
+  if (!gestureManager) return;
+  gestureManager.stopCamera();
+  gestureManager = null;
+  handVisualizer = null;
+}
+
+// ========== 展开/关闭 Overlay 面板 ==========
+function togglePanel(panelElem) {
+  const isActive = panelElem.classList.contains('active');
+  // 先关闭全部
+  [tutorialPanel, savedPanel, aboutPanel].forEach((p) => {
+    p.classList.remove('active');
+  });
+  // 若原本没开，则打开
+  if (!isActive) {
+    panelElem.classList.add('active');
+  }
+}
+
+// ========== 动画循环 / 参数映射 ==========
 function animate() {
   requestAnimationFrame(animate);
 
-  // 如果尚未初始化 sceneManager 或未选择场景，则跳过
   if (!sceneManager || !sceneManager.currentScene) {
     return;
   }
 
-  // 如果已经有 gestureManager，则获取手势参数
+  // 如果手势已开启，则获取 raw param
   let paramLeft = 0;
   let paramRight = 0;
   if (gestureManager) {
@@ -146,7 +269,11 @@ function animate() {
     paramRight = gestureManager.paramRightSmooth;
   }
 
-  // 根据用户配置映射到场景
+  // 实时从 select 读当前值
+  appConfig.leftParam = selectLeftParam.value;
+  appConfig.rightParam = selectRightParam.value;
+
+  // 计算要传给场景的实际数值
   const valLeft = computeParamValue(appConfig.leftParam, paramLeft, paramRight);
   const valRight = computeParamValue(
     appConfig.rightParam,
@@ -154,161 +281,24 @@ function animate() {
     paramRight
   );
 
-  // 更新 & 渲染
   sceneManager.update({
     paramLeft: valLeft,
     paramRight: valRight,
   });
   sceneManager.render();
 }
-animate();
 
-// 根据用户自定义的“组合参数”规则，计算最终值
+// 根据 paramName 做简单逻辑映射
 function computeParamValue(paramName, rawL, rawR) {
   if (!paramName) return 0;
-
-  // 如果是 "rotate+scaleZ" 这类组合 => 简单示例：取平均
+  // 如果是 "pA+pB" 这种combo，示例：取平均
   if (paramName.includes('+')) {
     return (rawL + rawR) / 2;
   }
-  switch (paramName) {
-    case 'finAngle':
-      // 如果finAngle是在左手param => 用rawL，否则用rawR
-      return paramName === appConfig.leftParam ? rawL : rawR;
-    case 'glassTint':
-      return paramName === appConfig.leftParam ? rawL : rawR;
-    // 如果你还定义了 frameDepth 等，也同理处理
-    default:
-      // fallback: 直接用 rawL 或 rawR (若你想要别的逻辑也行)
-      if (paramName === appConfig.leftParam) return rawL;
-      else return rawR;
-  }
+  // 简单默认: 如果 paramName == leftParam -> 用 rawL, 否则用 rawR
+  // 你也可根据 paramName 做更复杂的映射
+  return paramName === appConfig.leftParam ? rawL : rawR;
 }
 
-// ========== Step 1 -> Step 2 ==========
-btnGotoStep2.addEventListener('click', async () => {
-  if (!appConfig.chosenScene) return;
-  showStep(2);
-
-  // 根据选择的场景，填充可用参数
-  if (appConfig.chosenScene === 'sceneA') {
-    // 新增 "scaleZ" 参数
-    appConfig.availableParams = ['rotate', 'offset', 'another', 'scaleZ'];
-  } else if (appConfig.chosenScene === 'sceneB') {
-    appConfig.availableParams = ['tilt', 'roofHeight', 'fooParam'];
-  } else if (appConfig.chosenScene === 'sceneC') {
-    appConfig.availableParams = ['finAngle', 'glassTint'];
-  }
-
-  // 渲染 paramList
-  paramListArea.innerHTML = '';
-  appConfig.availableParams.forEach((p) => {
-    const ck = document.createElement('input');
-    ck.type = 'checkbox';
-    ck.value = p;
-    ck.addEventListener('change', () => onParamCheckChange());
-    const label = document.createElement('label');
-    label.textContent = p;
-    label.style.marginRight = '10px';
-
-    paramListArea.appendChild(ck);
-    paramListArea.appendChild(label);
-  });
-});
-
-function onParamCheckChange() {
-  // 记录选中了哪些参数
-  const checked = [];
-  paramListArea.querySelectorAll('input[type=checkbox]').forEach((ck) => {
-    if (ck.checked) checked.push(ck.value);
-  });
-  appConfig.selectedParams = checked.concat(appConfig.comboParams);
-
-  // 如果总数(已选 + combo) >= 2，启用“下一步”
-  btnGotoStep3.disabled = appConfig.selectedParams.length < 2;
-}
-
-// ========== Step 2: 创建组合参数 ==========
-btnCreateCombo.addEventListener('click', () => {
-  // 简单示例：自动创建 pA + pB（取前两个可用参数）
-  if (appConfig.availableParams.length >= 2) {
-    const pA = appConfig.availableParams[0];
-    const pB = appConfig.availableParams[1];
-    const comboName = `${pA}+${pB}`;
-    if (!appConfig.comboParams.includes(comboName)) {
-      appConfig.comboParams.push(comboName);
-      renderComboList();
-    }
-    onParamCheckChange();
-  }
-});
-
-function renderComboList() {
-  comboList.innerHTML = '';
-  appConfig.comboParams.forEach((combo) => {
-    const div = document.createElement('div');
-    div.textContent = `组合参数: ${combo}`;
-    comboList.appendChild(div);
-  });
-}
-
-// ========== Step 2 -> Step 3 ==========
-btnGotoStep3.addEventListener('click', () => {
-  showStep(3);
-
-  // 在选择菜单里列出当前可用的(已勾选的 + combo)
-  const params = appConfig.selectedParams;
-  [selectLeftParam, selectRightParam].forEach((sel) => {
-    sel.innerHTML = '';
-    params.forEach((p) => {
-      const opt = document.createElement('option');
-      opt.value = p;
-      opt.textContent = p;
-      sel.appendChild(opt);
-    });
-  });
-});
-
-// ========== Step 3 -> Step 4 ==========
-btnGotoStep4.addEventListener('click', () => {
-  // 读取选择
-  appConfig.leftParam = selectLeftParam.value;
-  appConfig.rightParam = selectRightParam.value;
-  showStep(4);
-
-  // 这时才在 SceneManager 里真正加载场景
-  sceneManager.loadScene(appConfig.chosenScene);
-
-  // 启用拖拽
-  dragManager.enable();
-  console.log('Dragging enabled.');
-});
-
-// ========== Step 4 -> Step 5 ==========
-btnGotoStep5.addEventListener('click', () => {
-  // 关闭拖拽
-  dragManager.disable();
-  console.log('Dragging disabled.');
-
-  // 进入手势交互
-  showStep(5);
-
-  // 显示摄像头容器
-  document.getElementById('cameraContainer').style.display = 'block';
-
-  // 初始化手势识别
-  initGestureManagers();
-});
-
-// ========== Step 5: End Demo ==========
-btnEndDemo.addEventListener('click', () => {
-  if (gestureManager) {
-    gestureManager.stopCamera();
-  }
-  document.getElementById('cameraContainer').style.display = 'none';
-  alert('Demo 结束！');
-});
-
-// 启动时，初始化 Manager，进入 Step 1
-initManagers();
-showStep(1);
+// 启动
+init();

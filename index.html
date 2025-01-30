@@ -2,72 +2,160 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Multi-Step Param & Gesture Demo</title>
+    <title>Param & Gesture Demo - New Layout</title>
     <style>
       body {
         margin: 0;
-        overflow: hidden;
         font-family: sans-serif;
         background-color: #333;
         color: #eee;
+        overflow: hidden; /* 我们让3D画面铺满屏幕 */
       }
-      /* ======== Common Panel / Layout ======== */
-      #mainContainer {
-        position: relative;
+
+      /* ========== Layout: sidebar + main ========== */
+      #app {
+        display: flex;
         width: 100vw;
         height: 100vh;
       }
 
-      .stepPanel {
-        position: absolute;
-        top: 10px;
-        left: 10px;
-        right: 10px;
-        margin: auto;
-        max-width: 600px;
-        background: rgba(0, 0, 0, 0.5);
-        border-radius: 6px;
-        padding: 15px;
-        display: none; /* hidden by default */
-        z-index: 9999;
+      /* ---- Sidebar ---- */
+      #sidebar {
+        width: 220px;
+        background: #2f2f2f;
+        display: flex;
+        flex-direction: column;
+        border-right: 2px solid #444;
       }
-      .stepPanel.active {
+      #sidebar h2 {
+        margin: 0;
+        padding: 1em;
+        font-size: 1.2rem;
+        background: #444;
+      }
+      #sidebar ul {
+        list-style: none;
+        padding-left: 0;
+        margin: 0;
+      }
+      #sidebar li {
+        margin: 0;
+      }
+      #sidebar button,
+      #sidebar a {
+        width: 100%;
         display: block;
+        padding: 0.8em;
+        background: none;
+        color: #ccc;
+        border: none;
+        text-align: left;
+        outline: none;
+        cursor: pointer;
+        font-size: 0.95rem;
       }
-      .btnGroup {
-        margin-top: 10px;
+      #sidebar button:hover,
+      #sidebar a:hover {
+        background: #444;
+        color: #fff;
       }
-      button {
-        margin-right: 6px;
+      /* 下拉子菜单 */
+      .submenu {
+        padding-left: 1em;
       }
 
-      /* ======== Snapshots & Camera Overlay ======== */
-      #snapshots {
+      /* ---- Main content ---- */
+      #mainContent {
+        flex: 1;
+        position: relative;
+        overflow: hidden;
+      }
+      /* 3D 渲染在这里面 */
+      #threeContainer {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: #000;
+      }
+
+      /* ======== Top/Bottom or floating panels ======== */
+      /* Tutorial, Saved Scenes, About 以绝对定位的面板显示/隐藏 */
+      .overlayPanel {
         position: absolute;
         top: 10px;
+        left: 240px; /* 让出sidebar的宽度 */
         right: 10px;
+        max-height: 80vh;
+        overflow-y: auto;
+        background: rgba(0, 0, 0, 0.6);
+        border: 1px solid #444;
+        border-radius: 4px;
+        padding: 10px;
+        display: none; /* 默认隐藏，点击菜单后显示 */
+        z-index: 9999;
+      }
+
+      .overlayPanel.active {
+        display: block;
+      }
+
+      /* Parameters & Controls:固定在底部 或者右上都可以，这里示例放在顶部 */
+      #paramControls {
+        position: absolute;
+        bottom: 10px;
+        left: 20px;
+        right: 20px;
         background: rgba(0, 0, 0, 0.5);
         padding: 10px;
         border-radius: 4px;
-        max-height: 70vh;
-        overflow-y: auto;
-        z-index: 10;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+        z-index: 999;
       }
-      .snapshotItem {
-        margin-bottom: 10px;
+      #paramControls select {
+        background: #222;
+        color: #ddd;
+        border: 1px solid #555;
+        padding: 4px;
+      }
+      #paramControls label {
+        margin-right: 5px;
+      }
+      #paramControls button {
+        margin: 0 5px;
+        background: #444;
+        color: #ddd;
+        border: 1px solid #666;
+        padding: 6px 10px;
+        cursor: pointer;
+      }
+      #paramControls button:hover {
+        background: #555;
       }
 
+      /* Snapshots inside overlay panel for "Saved Scenes" */
+      #snapshotsPanel img {
+        max-width: 140px;
+        display: block;
+        margin-bottom: 5px;
+      }
+
+      /* Camera Overlay for hand tracking */
       #cameraContainer {
         position: absolute;
-        bottom: 10px;
-        left: 10px;
+        bottom: 80px;
+        left: 20px;
         width: 320px;
         height: 240px;
         border: 2px solid #999;
         border-radius: 4px;
         overflow: hidden;
         z-index: 9999;
-        display: none; /* 在第5步才显示 */
+        display: none; /* 默认隐藏，启用手势时显示 */
       }
       #video {
         position: absolute;
@@ -80,98 +168,83 @@
         width: 100%;
         height: 100%;
       }
-      /* 3D 渲染全屏覆盖 */
-      canvas.webgl {
-        position: absolute;
-        top: 0;
-        left: 0;
-      }
     </style>
   </head>
-
   <body>
-    <div id="mainContainer">
-      <!-- 场景渲染会注入在此容器中 (由 SceneManager) -->
-
-      <!-- ======== Step 1: 选择场景 ======== -->
-      <div id="step1" class="stepPanel">
-        <h2>Step 1: 选择场景</h2>
-        <p>请选择一个场景进行演示:</p>
-        <button data-scene="sceneA">Scene A: Lego Stack</button>
-        <button data-scene="sceneB">Scene B: Columns</button>
-        <button data-scene="sceneC">Scene C: Facade</button>
-        <div class="btnGroup">
-          <button id="btnGotoStep2" disabled>下一步</button>
-        </div>
+    <div id="app">
+      <!-- ========== Sidebar ========== -->
+      <div id="sidebar">
+        <h2>Gesture Demo</h2>
+        <ul>
+          <li>
+            <button id="menuSceneToggle">Scene ▾</button>
+            <ul class="submenu" id="sceneSubmenu">
+              <li><button data-scene="sceneA">Scene A: Lego</button></li>
+              <li><button data-scene="sceneB">Scene B: Columns</button></li>
+              <li><button data-scene="sceneC">Scene C: Facade</button></li>
+            </ul>
+          </li>
+          <li><button id="menuTutorial">Tutorial</button></li>
+          <li><button id="menuSaved">Saved Scenes</button></li>
+          <li><button id="menuAbout">About</button></li>
+        </ul>
       </div>
 
-      <!-- ======== Step 2: 查看并设置场景参数 ======== -->
-      <div id="step2" class="stepPanel">
-        <h2>Step 2: 场景参数设置</h2>
-        <div id="paramListArea">
-          <!-- 动态插入可选参数 -->
-        </div>
-        <p style="margin-top: 10px">
-          选择你想控制的 **两个参数**（分别对应左手和右手），或创建“组合参数”。
-        </p>
-        <div class="btnGroup">
-          <button id="btnCreateCombo">+ 创建组合参数</button>
-        </div>
-        <div id="comboList"></div>
+      <!-- ========== Main Content ========== -->
+      <div id="mainContent">
+        <!-- Three.js容器 -->
+        <div id="threeContainer"></div>
 
-        <div class="btnGroup">
-          <button id="btnGotoStep3" disabled>下一步</button>
+        <!-- 参数面板 + 拖拽/手势开关等 -->
+        <div id="paramControls">
+          <div>
+            <label>Left Hand Param:</label>
+            <select id="selectLeftParam"></select>
+          </div>
+          <div>
+            <label>Right Hand Param:</label>
+            <select id="selectRightParam"></select>
+          </div>
+          <button id="btnCreateCombo">+Combo</button>
+
+          <!-- Drag toggle -->
+          <button id="btnToggleDrag">Drag: OFF</button>
+
+          <!-- Gesture toggle -->
+          <button id="btnToggleGesture">Gesture: OFF</button>
         </div>
-      </div>
 
-      <!-- ======== Step 3: 为左右手分配参数 ======== -->
-      <div id="step3" class="stepPanel">
-        <h2>Step 3: 分配参数给左右手</h2>
-        <p>
-          左手控制:
-          <select id="selectLeftParam"></select>
-        </p>
-        <p>
-          右手控制:
-          <select id="selectRightParam"></select>
-        </p>
-        <div class="btnGroup">
-          <button id="btnGotoStep4">下一步</button>
+        <!-- 摄像头画面 + 手势可视化 -->
+        <div id="cameraContainer">
+          <video id="video" autoplay playsinline muted></video>
+          <canvas id="landmarkCanvas"></canvas>
         </div>
-      </div>
 
-      <!-- ======== Step 4: 基本编辑(拖拽操作) ======== -->
-      <div id="step4" class="stepPanel">
-        <h2>Step 4: 基础拖拽编辑</h2>
-        <p>
-          此时场景可见，但不启用摄像头。你可以点击并拖拽场景中的物体进行XYZ移动。
-        </p>
-        <p>完成后点击“进入手势交互”。</p>
-        <div class="btnGroup">
-          <button id="btnGotoStep5">进入手势交互</button>
+        <!-- Tutorial Panel -->
+        <div id="tutorialPanel" class="overlayPanel">
+          <h3>Tutorial</h3>
+          <p>
+            单手 Pinch(握拳) 2秒 => 保存快照<br />
+            双手 Pinch(同时握拳) 4秒 => 结束手势识别
+          </p>
+          <p>你也可以随时在底部按钮中启用/停止手势。</p>
         </div>
-      </div>
 
-      <!-- ======== Step 5: 手势交互 ======== -->
-      <div id="step5" class="stepPanel">
-        <h2>Step 5: 手势交互</h2>
-        <p>
-          摄像头已开启：<br />
-          - **单手 Pinch (握拳) 2秒** => Snapshot；<br />
-          - **双手同时握拳 4秒** => 结束Session
-        </p>
-        <div class="btnGroup">
-          <button id="btnEndDemo">停止摄像头 & 结束</button>
+        <!-- Saved Scenes Panel -->
+        <div id="savedPanel" class="overlayPanel">
+          <h3>Saved Scenes</h3>
+          <div id="snapshotsPanel"></div>
         </div>
-      </div>
 
-      <!-- Snapshots Panel -->
-      <div id="snapshots"></div>
-
-      <!-- Camera Overlay -->
-      <div id="cameraContainer">
-        <video id="video" autoplay playsinline muted></video>
-        <canvas id="landmarkCanvas"></canvas>
+        <!-- About Panel -->
+        <div id="aboutPanel" class="overlayPanel">
+          <h3>About This Project</h3>
+          <p>
+            这是一个基于Three.js +
+            MediaPipe的手势交互演示，展示如何用连续手势参数来控制建筑形体。
+          </p>
+          <p>原作者: XXX, 2025</p>
+        </div>
       </div>
     </div>
 
