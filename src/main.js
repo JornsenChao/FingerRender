@@ -6,6 +6,7 @@ import { SnapshotManager } from './managers/SnapshotManager.js';
 import { DragManager } from './managers/DragManager.js';
 
 // 全局配置对象
+// 注意：若你想在场景代码中直接访问 appConfig，可将其挂载到 window 上
 const appConfig = {
   chosenScene: null,
   availableParams: [],
@@ -61,9 +62,6 @@ function init() {
   );
   dragManager.disable(); // 初始关闭
 
-  // 手势功能：暂时不初始化，等用户点击“Gesture: ON”后再init
-  gestureManager = null;
-
   // 绑定 sidebar按钮
   sceneButtons.forEach((btn) => {
     btn.addEventListener('click', onChooseScene);
@@ -90,13 +88,33 @@ function onChooseScene(e) {
   // 根据场景ID，填充可用参数
   switch (sceneId) {
     case 'sceneA':
+      // 例如: 仅演示性加几个名字
       appConfig.availableParams = ['rotate', 'offset', 'another', 'scaleZ'];
       break;
     case 'sceneB':
       appConfig.availableParams = ['tilt', 'roofHeight', 'fooParam'];
       break;
     case 'sceneC':
-      appConfig.availableParams = ['finAngle', 'glassTint'];
+      // 比原先多加 "frameDepth", "panelScale"
+      appConfig.availableParams = [
+        'finAngle',
+        'glassTint',
+        'frameDepth',
+        'panelScale',
+      ];
+      break;
+    case 'sceneD':
+      // 这里给出可选参数。例如:
+      //  - towerHeight  => 楼高
+      //  - towerTaper   => 楼体上/下的相对缩放(模拟底部更外扩,顶部更收)
+      //  - finAngle     => 竖直装饰片的偏转角
+      //  - finCount     => 装饰片数量
+      appConfig.availableParams = [
+        'towerHeight',
+        'towerTaper',
+        'finAngle',
+        'finCount',
+      ];
       break;
     default:
       appConfig.availableParams = [];
@@ -120,7 +138,6 @@ function refreshParamSelectors() {
   const paramList = appConfig.availableParams.concat(appConfig.comboParams);
 
   if (paramList.length === 0) {
-    // 如果场景还没选择，空列表
     const opt = document.createElement('option');
     opt.value = '';
     opt.textContent = 'No params';
@@ -142,9 +159,9 @@ function refreshParamSelectors() {
     selectRightParam.appendChild(opt2);
   });
 
-  // 默认选第一项
+  // 默认选第一项(若只一个则左右都是同一个)
   selectLeftParam.selectedIndex = 0;
-  selectRightParam.selectedIndex = 1 < paramList.length ? 1 : 0;
+  selectRightParam.selectedIndex = Math.min(1, paramList.length - 1);
 
   // 更新appConfig
   appConfig.leftParam = selectLeftParam.value;
@@ -240,7 +257,7 @@ function stopGesture() {
   handVisualizer = null;
 }
 
-// ========== 展开/关闭 Overlay 面板 ==========
+// 展开/关闭 Overlay 面板
 function togglePanel(panelElem) {
   const isActive = panelElem.classList.contains('active');
   // 先关闭全部
@@ -253,7 +270,7 @@ function togglePanel(panelElem) {
   }
 }
 
-// ========== 动画循环 / 参数映射 ==========
+// 动画循环 / 参数映射
 function animate() {
   requestAnimationFrame(animate);
 
@@ -261,7 +278,7 @@ function animate() {
     return;
   }
 
-  // 如果手势已开启，则获取 raw param
+  // 读当前手势值
   let paramLeft = 0;
   let paramRight = 0;
   if (gestureManager) {
@@ -269,11 +286,11 @@ function animate() {
     paramRight = gestureManager.paramRightSmooth;
   }
 
-  // 实时从 select 读当前值
+  // 同步最新下拉选项
   appConfig.leftParam = selectLeftParam.value;
   appConfig.rightParam = selectRightParam.value;
 
-  // 计算要传给场景的实际数值
+  // 计算实际数值
   const valLeft = computeParamValue(appConfig.leftParam, paramLeft, paramRight);
   const valRight = computeParamValue(
     appConfig.rightParam,
@@ -281,22 +298,25 @@ function animate() {
     paramRight
   );
 
+  // 将名字和数值一起传给 scene
   sceneManager.update({
     paramLeft: valLeft,
     paramRight: valRight,
+    leftParamName: appConfig.leftParam,
+    rightParamName: appConfig.rightParam,
   });
+
   sceneManager.render();
 }
 
-// 根据 paramName 做简单逻辑映射
+// 针对 "pA+pB" 组合，给个简单示例: 取左右手均值
 function computeParamValue(paramName, rawL, rawR) {
   if (!paramName) return 0;
-  // 如果是 "pA+pB" 这种combo，示例：取平均
   if (paramName.includes('+')) {
     return (rawL + rawR) / 2;
   }
-  // 简单默认: 如果 paramName == leftParam -> 用 rawL, 否则用 rawR
-  // 你也可根据 paramName 做更复杂的映射
+  // 默认为：若paramName是左手选的，就用rawL；否则用rawR
+  // 当然也可再分情况做更细致的映射
   return paramName === appConfig.leftParam ? rawL : rawR;
 }
 

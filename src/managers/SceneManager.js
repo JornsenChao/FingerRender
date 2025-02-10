@@ -5,7 +5,8 @@ import { OrbitControls } from 'https://unpkg.com/three@0.152.2/examples/jsm/cont
 // 引入具体场景
 import { SceneA_Lego } from '../scenes/SceneA_Lego.js';
 import { SceneB_Columns } from '../scenes/SceneB_Columns.js';
-import { SceneC_Facade } from '../scenes/SceneC_Facade.js'; // 顶部
+import { SceneC_Facade } from '../scenes/SceneC_Facade.js';
+import { SceneD_KKAHongkouSOHO } from '../scenes/SceneD_KKAHongkouSOHO.js';
 
 export class SceneManager {
   constructor(domContainer) {
@@ -68,6 +69,8 @@ export class SceneManager {
     } else if (sceneID === 'sceneC') {
       newScene = new SceneC_Facade();
       console.log('Loading SceneC_Facade...');
+    } else if (sceneID === 'sceneD') {
+      newScene = new SceneD_KKAHongkouSOHO();
     } else {
       console.warn('Unknown sceneID:', sceneID);
       return;
@@ -92,11 +95,13 @@ export class SceneManager {
     });
   }
 
+  /**
+   * @param {Object} paramData - { paramLeft, paramRight, leftParamName, rightParamName }
+   */
   update(paramData) {
-    // paramData = { paramLeft, paramRight }
     if (this.currentScene && this.currentScene.update) {
       this.currentScene.update(paramData);
-      console.log('Scene update', paramData);
+      // console.log('Scene update', paramData); // 可调试时打开
     }
   }
 
